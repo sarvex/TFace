@@ -145,7 +145,7 @@ class CutoutOp(object):
 
         mask = np.ones((h, w, 1), np.uint8)
 
-        for n in range(self.n_holes):
+        for _ in range(self.n_holes):
             y = np.random.randint(h)
             x = np.random.randint(w)
 
@@ -206,7 +206,7 @@ class AddmaskOp(object):
             # crop roi
             height_glass_adj, width_glass_adj = mat_glass.shape[:2]
             height_mat_face, width_mat_face = mat_face.shape[:2]
-            flags = list() # record refine mat_glass
+            flags = []
             min_h = max(0, int(pupil_center[1] - height_glass_adj / 2.0))
             if min_h == 0:
                 flags.append(1)
@@ -225,7 +225,7 @@ class AddmaskOp(object):
             max_h_glass = height_glass_adj
             min_w_glass = 0
             max_w_glass = width_glass_adj
-            if len(flags) != 0:
+            if flags:
                 if 1 in flags:
                     min_h_glass = height_glass_adj - (max_h - min_h)
                 if 2 in flags:
@@ -236,7 +236,7 @@ class AddmaskOp(object):
                     max_w_glass = width_glass_adj - (width_glass_adj - (max_w - min_w))
                 mat_glass = mat_glass[min_h_glass: max_h_glass, min_w_glass: max_w_glass]
             return roi, mat_glass, [min_h, max_h, min_w, max_w]
-        
+
         #Random choose glass
         idx = random.randint(0,4)
         mat_glass = self.glass_mats[idx]
@@ -250,7 +250,7 @@ class AddmaskOp(object):
         mat_face[min_h: max_h, min_w: max_w] = cv.add(img1_bg, img2_fg)
 
         img = Image.fromarray(cv.cvtColor(mat_face, cv.COLOR_BGR2RGB))
-        
+
         return img 
 
 
@@ -323,7 +323,7 @@ class AddglassOp(object):
             # crop roi
             height_glass_adj, width_glass_adj = mask_glass.shape[:2]
             height_mat_face, width_mat_face = mask_face.shape[:2]
-            flags = list() # record refine mat_glass
+            flags = []
             min_h = max(0, int(mask_pupil_center[1] - height_glass_adj / 2.0))
             if min_h == 0:
                 flags.append(1)
@@ -342,7 +342,7 @@ class AddglassOp(object):
             mask_max_h_glass = height_glass_adj
             mask_min_w_glass = 0
             mask_max_w_glass = width_glass_adj
-            if len(flags) != 0:
+            if flags:
                 if 1 in flags:
                     mask_min_h_glass = height_glass_adj - (max_h - min_h)
                 if 2 in flags:
@@ -354,7 +354,7 @@ class AddglassOp(object):
                 mask_glass = mask_glass[mask_min_h_glass: mask_max_h_glass, 
                                         mask_min_w_glass: mask_max_w_glass]
             return roi, mask_glass, [min_h, max_h, min_w, max_w]
-       
+
         #Random choose glass
         idx = random.randint(0,4)
         mat_glass = self.glass_mats[idx]

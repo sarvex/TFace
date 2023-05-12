@@ -111,11 +111,7 @@ class GhostBottleneck(nn.Module):
             self.bn_dw = nn.BatchNorm2d(mid_chs)
 
         # Squeeze-and-excitation
-        if has_se:
-            self.se = SqueezeExcite(mid_chs, se_ratio=se_ratio)
-        else:
-            self.se = None
-
+        self.se = SqueezeExcite(mid_chs, se_ratio=se_ratio) if has_se else None
         # Point-wise linear projection
         self.ghost2 = GhostModule(mid_chs, out_chs, relu=False)
 

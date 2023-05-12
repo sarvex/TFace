@@ -12,25 +12,24 @@ def parse_args():
                         help='path to tfrecord index file')
     parser.add_argument('--new', default=None, type=str, required=True,
                         help='path to new training list')
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 def build_dict(tfr_index):
     d = {}
-    print("reading {}".format(tfr_index))
+    print(f"reading {tfr_index}")
     tfr_name = os.path.basename(tfr_index).replace('.index', '')
     with open(tfr_index, 'r') as f:
         for line in f:
             file_name, shard_index, offset = line.rstrip().split('\t')
-            d[file_name] = '{}\t{}\t{}'.format(tfr_name, shard_index, offset)
+            d[file_name] = f'{tfr_name}\t{shard_index}\t{offset}'
     print("build dict done")
     return d
 
 
 def convert(index_file, d, out_index_file):
-    print("write to new index file {}".format(out_index_file))
-    with open(index_file, 'r') as f, open(out_index_file, 'w') as out_f:
+    print(f"write to new index file {out_index_file}")
+    with (open(index_file, 'r') as f, open(out_index_file, 'w') as out_f):
         for line in f:
             if '\t' in line:
                 file_name, label = line.rstrip().split('\t')
@@ -38,9 +37,9 @@ def convert(index_file, d, out_index_file):
                 file_name, label = line.rstrip().split(' ')
             tfr_string = d.get(file_name, None)
             if tfr_string is None:
-                print(file_name + " failed")
+                print(f"{file_name} failed")
                 continue
-            out_f.write(tfr_string + '\t{}'.format(label) + '\n')
+            out_f.write(f'{tfr_string}\t{label}' + '\n')
 
 
 def main():

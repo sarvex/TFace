@@ -17,8 +17,7 @@ def parse_args():
     parser.add_argument('--batch_size', default=64, help='batch size')
     parser.add_argument('--data_root', default='', required=True, help='validation data root')
     parser.add_argument('--embedding_size', default=512, help='embedding_size')
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 def load_rfw_bin(path, name):
@@ -58,7 +57,7 @@ def main():
     # load backbone
     backbone = get_model(args.backbone)(input_size)
     if not os.path.exists(args.ckpt_path):
-        raise RuntimeError("%s not exists" % args.ckpt_path)
+        raise RuntimeError(f"{args.ckpt_path} not exists")
     backbone.load_state_dict(torch.load(args.ckpt_path))
     # backbone to gpu
     gpus = [int(x) for x in args.gpu_ids.rstrip().split(',')]
@@ -71,12 +70,11 @@ def main():
     for race_bin in race_bins:
         # perform accuracy evaluation on each ethnicity
         ver_list = load_rfw_bin(val_data_dir, race_bin)
-        results = []
         acc1, std1, acc2, std2, xnorm, embeddings_list = perform_rfw_val_bin(ver_list, backbone, gpus, batch_size)
         print('[%s]XNorm: %f' % (race_bin, xnorm))
         print('[%s]Accuracy: %1.5f+-%1.5f' % (race_bin, acc1, std1))
         print('[%s]Accuracy-Flip: %1.5f+-%1.5f' % (race_bin, acc2, std2))
-        results.append(acc2)
+        results = [acc2]
         print('Max of [%s] is %1.5f' % (race_bin, np.max(results)))
         accuracies.append(np.max(results))
     accuracies = np.array(accuracies)

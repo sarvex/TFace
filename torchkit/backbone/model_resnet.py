@@ -120,12 +120,9 @@ class ResNet(Module):
                 BatchNorm2d(planes * block.expansion),
             )
 
-        layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample))
+        layers = [block(self.inplanes, planes, stride, downsample)]
         self.inplanes = planes * block.expansion
-        for _ in range(1, blocks):
-            layers.append(block(self.inplanes, planes))
-
+        layers.extend(block(self.inplanes, planes) for _ in range(1, blocks))
         return Sequential(*layers)
 
     def forward(self, x):
@@ -151,22 +148,16 @@ class ResNet(Module):
 def ResNet_50(input_size, **kwargs):
     """ Constructs a ResNet-50 model.
     """
-    model = ResNet(input_size, Bottleneck, [3, 4, 6, 3], **kwargs)
-
-    return model
+    return ResNet(input_size, Bottleneck, [3, 4, 6, 3], **kwargs)
 
 
 def ResNet_101(input_size, **kwargs):
     """ Constructs a ResNet-101 model.
     """
-    model = ResNet(input_size, Bottleneck, [3, 4, 23, 3], **kwargs)
-
-    return model
+    return ResNet(input_size, Bottleneck, [3, 4, 23, 3], **kwargs)
 
 
 def ResNet_152(input_size, **kwargs):
     """ Constructs a ResNet-152 model.
     """
-    model = ResNet(input_size, Bottleneck, [3, 8, 36, 3], **kwargs)
-
-    return model
+    return ResNet(input_size, Bottleneck, [3, 8, 36, 3], **kwargs)

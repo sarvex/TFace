@@ -17,15 +17,13 @@ def parse_args():
     parser.add_argument('--limit', default=10, type=int, required=True,
                         help='limit num of decoded samples')
 
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 def parser(feature_list):
     for key, feature in feature_list:
         if key == 'image':
-            image_raw = feature.bytes_list.value[0]
-            return image_raw
+            return feature.bytes_list.value[0]
     raise ValueError("No key=image in feature list")
 
 
@@ -37,14 +35,13 @@ def get_record(record_file, offset):
         # proto,crc
         pb_data = ifs.read(proto_len)
         if len(pb_data) < proto_len:
-            print("read pb_data err,proto_len:%s pb_data len:%s" % (proto_len, len(pb_data)))
+            print(f"read pb_data err,proto_len:{proto_len} pb_data len:{len(pb_data)}")
             return None
     example = example_pb2.Example()
     example.ParseFromString(pb_data)
     # keep key value in order
     feature = sorted(example.features.feature.items())
-    record = parser(feature)
-    return record
+    return parser(feature)
 
 
 def main():
@@ -58,7 +55,7 @@ def main():
     print(tfrecords_dir)
     print(tfrecords_name)
 
-    index_file = os.path.join(tfrecords_dir, '%s.index' % tfrecords_name)
+    index_file = os.path.join(tfrecords_dir, f'{tfrecords_name}.index')
     with open(index_file, 'r') as f:
         for line_i, line in enumerate(f):
             if line_i >= limit:
@@ -67,9 +64,8 @@ def main():
             record_file = os.path.join(tfrecords_dir,  "%s-%05d.tfrecord" % (tfrecords_name, int(tfr_idx)))
             image_raw = get_record(record_file, int(tfr_offset))
             img_path = os.path.join(output_dir, os.path.basename(raw_img_path))
-            f = open(img_path, 'wb')
-            f.write(image_raw)
-            f.close()
+            with open(img_path, 'wb') as f:
+                f.write(image_raw)
 
 if __name__ == "__main__":
     main()

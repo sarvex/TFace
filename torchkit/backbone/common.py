@@ -10,7 +10,11 @@ def initialize_weights(modules):
     """ Weight initilize, conv2d and linear is initialized with kaiming_normal
     """
     for m in modules:
-        if isinstance(m, nn.Conv2d):
+        if (
+            isinstance(m, nn.Conv2d)
+            or not isinstance(m, nn.BatchNorm2d)
+            and isinstance(m, nn.Linear)
+        ):
             nn.init.kaiming_normal_(m.weight,
                                     mode='fan_out',
                                     nonlinearity='relu')
@@ -19,12 +23,6 @@ def initialize_weights(modules):
         elif isinstance(m, nn.BatchNorm2d):
             m.weight.data.fill_(1)
             m.bias.data.zero_()
-        elif isinstance(m, nn.Linear):
-            nn.init.kaiming_normal_(m.weight,
-                                    mode='fan_out',
-                                    nonlinearity='relu')
-            if m.bias is not None:
-                m.bias.data.zero_()
 
 
 class Flatten(Module):
@@ -65,8 +63,7 @@ class GNAP(Module):
         x = x * weight
         x = self.pool(x)
         x = x.view(x.shape[0], -1)
-        feature = self.bn2(x)
-        return feature
+        return self.bn2(x)
 
 
 class GDC(Module):

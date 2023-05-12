@@ -27,7 +27,7 @@ class TrainTask(BaseTask):
         backbone_name = self.cfg['BACKBONE_NAME']
         backbone_model = get_model(backbone_name)
         backbone = backbone_model([112, 112])
-        logging.info("{} Backbone Generated".format(backbone_name))
+        logging.info(f"{backbone_name} Backbone Generated")
 
         embedding_size = self.cfg['EMBEDDING_SIZE']
         heads = []

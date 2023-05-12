@@ -219,11 +219,7 @@ class Identity(nn.Module):
         )
 
     def forward(self, x):
-        if self.conv:
-            out = self.conv(x)
-        else:
-            out = x
-        return out
+        return self.conv(x) if self.conv else x
 
 
 class CascadeConv3x3(nn.Sequential):
@@ -268,10 +264,7 @@ class Shift(nn.Module):
 
         for i in range(kernel_size):
             for j in range(kernel_size):
-                if i == hks and j == hks:
-                    num_ch = C // ksq + C % ksq
-                else:
-                    num_ch = C // ksq
+                num_ch = C // ksq + C % ksq if i == hks and j == hks else C // ksq
                 kernel[ch_idx : ch_idx + num_ch, 0, i, j] = 1
                 ch_idx += num_ch
 
@@ -344,9 +337,7 @@ class ChannelShuffle(nn.Module):
         """Channel shuffle: [N,C,H,W] -> [N,g,C/g,H,W] -> [N,C/g,g,H,w] -> [N,C,H,W]"""
         N, C, H, W = x.size()
         g = self.groups
-        assert C % g == 0, "Incompatible group size {} for input channel {}".format(
-            g, C
-        )
+        assert C % g == 0, f"Incompatible group size {g} for input channel {C}"
         return (
             x.view(N, g, int(C / g), H, W)
             .permute(0, 2, 1, 3, 4)
@@ -609,10 +600,7 @@ def expand_stages_cfg(stage_cfgs):
     """ For a list of stages
     """
     assert isinstance(stage_cfgs, list)
-    ret = []
-    for x in stage_cfgs:
-        ret.append(expand_stage_cfg(x))
-    return ret
+    return [expand_stage_cfg(x) for x in stage_cfgs]
 
 
 def _block_cfgs_to_list(block_cfgs):
@@ -656,9 +644,7 @@ def _add_to_arch(arch, info, name):
             assert (
                 arch[idx]["stage_idx"] == stage_idx
                 and arch[idx]["block_idx"] == block_idx
-            ), "Index ({}, {}) does not match for block {}".format(
-                stage_idx, block_idx, arch[idx]
-            )
+            ), f"Index ({stage_idx}, {block_idx}) does not match for block {arch[idx]}"
             assert name not in arch[idx]
             arch[idx][name] = block
             idx += 1
@@ -698,8 +684,7 @@ def get_num_stages(arch_def):
     ret = 0
     for x in arch_def["stages"]:
         ret = max(x["stage_idx"], ret)
-    ret = ret + 1
-    return ret
+    return ret + 1
 
 
 def get_blocks(arch_def, stage_indices=None, block_indices=None):
@@ -740,10 +725,7 @@ class FBNetBuilder(object):
         channel = stage_info[0]
         stride = stage_info[1]
         out_depth = self._get_divisible_width(int(channel * self.width_ratio))
-        kernel = 3
-        if len(stage_info) > 2:
-            kernel = stage_info[2]
-
+        kernel = stage_info[2] if len(stage_info) > 2 else 3
         out = ConvBNRelu(
             dim_in,
             out_depth,
@@ -768,18 +750,17 @@ class FBNetBuilder(object):
         for block in blocks:
             stage_idx = block["stage_idx"]
             #print("stage_idx =", stage_idx)
-            
+
             block_idx = block["block_idx"]
             block_op_type = block["block_op_type"]
             tcns = block["block"]
             n = tcns[2]
             assert n == 1
             nnblock = self.add_ir_block(tcns, [block_op_type])
-            nn_name = "xif{}_{}".format(stage_idx, block_idx)
+            nn_name = f"xif{stage_idx}_{block_idx}"
             assert nn_name not in modules
             modules[nn_name] = nnblock
-        ret = nn.Sequential(modules)
-        return ret
+        return nn.Sequential(modules)
 
     # def add_final_pool(self, model, blob_in, kernel_size):
     #     ret = model.AveragePool(blob_in, "final_avg", kernel=kernel_size, stride=1)
@@ -818,8 +799,7 @@ class FBNetBuilder(object):
         return op
 
     def _get_divisible_width(self, width):
-        ret = make_divisible(int(width), self.width_divisor, self.width_divisor)
-        return ret
+        return make_divisible(int(width), self.width_divisor, self.width_divisor)
 
     def add_last_states(self, dropout_ratio=0.4):
         output_layer = nn.Sequential(nn.BatchNorm2d(self.last_depth),
@@ -832,8 +812,7 @@ class FBNetBuilder(object):
 def _get_trunk_cfg(arch_def):
     num_stages = get_num_stages(arch_def)
     trunk_stages = arch_def.get("backbone", range(num_stages - 1))
-    ret = get_blocks(arch_def, stage_indices=trunk_stages)
-    return ret
+    return get_blocks(arch_def, stage_indices=trunk_stages)
 
 class FBNet(nn.Module):
     """FBNet
@@ -862,5 +841,4 @@ def get_fbnet_model(arch, input_size):
     arch_def = MODEL_ARCH[arch]
     arch_def = unify_arch_def(arch_def)
     builder = FBNetBuilder(width_ratio=1.0, bn_type="bn", width_divisor=8, dw_skip_bn=True, dw_skip_relu=True)
-    model = FBNet(builder, arch_def, dim_in=3, input_size=input_size)
-    return model
+    return FBNet(builder, arch_def, dim_in=3, input_size=input_size)

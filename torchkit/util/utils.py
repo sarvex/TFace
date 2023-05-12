@@ -10,8 +10,7 @@ def l2_norm(input, axis=1):
     """ l2 normalize
     """
     norm = torch.norm(input, 2, axis, True)
-    output = torch.div(input, norm)
-    return output
+    return torch.div(input, norm)
 
 
 @torch.no_grad()
@@ -29,9 +28,7 @@ def all_gather_tensor(input_tensor, dim=0):
     padded_list = [torch.ones_like(padded) for _ in range(world_size)]
     dist.all_gather(tensor_list=padded_list, tensor=padded, async_op=False)
 
-    slices = []
-    for ts, t in zip(tensor_size_list, padded_list):
-        slices.append(t[:ts.item()])
+    slices = [t[:ts.item()] for ts, t in zip(tensor_size_list, padded_list)]
     return torch.cat(slices, dim=0)
 
 
@@ -59,11 +56,10 @@ def separate_irse_bn_paras(modules):
             continue
         if 'container' in str(layer.__class__):
             continue
+        if 'batchnorm' in str(layer.__class__):
+            paras_only_bn.extend([*layer.parameters()])
         else:
-            if 'batchnorm' in str(layer.__class__):
-                paras_only_bn.extend([*layer.parameters()])
-            else:
-                paras_wo_bn.extend([*layer.parameters()])
+            paras_wo_bn.extend([*layer.parameters()])
     return paras_only_bn, paras_wo_bn
 
 
@@ -71,12 +67,11 @@ def separate_resnet_bn_paras(modules):
     """ sepeated bn params and wo-bn params
     """
     all_parameters = modules.parameters()
-    paras_only_bn = []
-
-    for pname, param in modules.named_parameters():
-        if pname.find('bn') >= 0:
-            paras_only_bn.append(param)
-
+    paras_only_bn = [
+        param
+        for pname, param in modules.named_parameters()
+        if pname.find('bn') >= 0
+    ]
     paras_only_bn_id = list(map(id, paras_only_bn))
     paras_wo_bn = list(filter(lambda p: id(p) not in paras_only_bn_id,
                               all_parameters))
@@ -88,9 +83,9 @@ def warm_up_lr(batch, num_batch_warm_up, init_lr, optimizer):
     """ warm up learning rate when batch step below warmup steps
     """
     if batch % 500 == 0:
-        print('current batch {} learning rate {}'.format(
-            batch,
-            batch * init_lr / num_batch_warm_up))
+        print(
+            f'current batch {batch} learning rate {batch * init_lr / num_batch_warm_up}'
+        )
     for params in optimizer.param_groups:
         params['lr'] = batch * init_lr / num_batch_warm_up
 
@@ -101,7 +96,7 @@ def adjust_learning_rate(optimizer, epoch, cfg):
     lr = cfg['LR']
     for milestone in cfg['STAGES']:
         lr *= 0.1 if epoch >= milestone else 1.
-    print('current epoch {} learning rate {}'.format(epoch, lr))
+    print(f'current epoch {epoch} learning rate {lr}')
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
@@ -203,11 +198,12 @@ def load_pretrain_backbone(backbone, backbone_resume):
     """ load pretrain backbone checkpoint
     """
     if os.path.exists(backbone_resume) and os.path.isfile(backbone_resume):
-        logging.info("Loading Backbone Checkpoint '{}'".format(backbone_resume))
+        logging.info(f"Loading Backbone Checkpoint '{backbone_resume}'")
         backbone.load_state_dict(torch.load(backbone_resume))
     else:
-        logging.info(("No Backbone Found at '{}'"
-                      "Please Have a Check or Continue to Train from Scratch").format(backbone_resume))
+        logging.info(
+            f"No Backbone Found at '{backbone_resume}'Please Have a Check or Continue to Train from Scratch"
+        )
 
 
 def load_pretrain_head(heads, head_names, head_resume, dist_fc=False, rank=0):
@@ -218,12 +214,13 @@ def load_pretrain_head(heads, head_names, head_resume, dist_fc=False, rank=0):
     else:
         head_resume = head_resume
     if os.path.exists(head_resume) and os.path.isfile(head_resume):
-        logging.info("Loading Head Checkpoint '{}'".format(head_resume))
+        logging.info(f"Loading Head Checkpoint '{head_resume}'")
         pretrain_heads = torch.load(head_resume)
         for index, head in enumerate(heads):
             head_name = head_names[index]
             pretrain_head = pretrain_heads[head_name]
             head.load_state_dict(pretrain_head)
     else:
-        logging.info(("No Head Found at '{}'"
-                      "Please Have a Check or Continue to Train from Scratch").format(head_resume))
+        logging.info(
+            f"No Head Found at '{head_resume}'Please Have a Check or Continue to Train from Scratch"
+        )

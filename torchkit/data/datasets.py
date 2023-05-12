@@ -28,7 +28,7 @@ def read_index_file(root_dir, index_file, train):
             names.append(image_name)
             image_path = os.path.join(root_dir, image_name)
             if not os.path.exists(image_path):
-                raise RuntimeError('Img %s not exits' % image_path)
+                raise RuntimeError(f'Img {image_path} not exits')
             samples.append((image_path, label))
             classes.add(label)
             label2index[label].append(index)
@@ -57,7 +57,9 @@ class FaceDataset(Dataset):
             root_dir, index_file, train=train)
         self.class_num = max(self.classes) + 1
         self.sample_num = len(self.imgs)
-        print("Number of Sampels:{} Number of Classes: {}".format(self.sample_num, self.class_num))
+        print(
+            f"Number of Sampels:{self.sample_num} Number of Classes: {self.class_num}"
+        )
 
     def __getitem__(self, index):
         path, label = self.imgs[index]
@@ -65,10 +67,7 @@ class FaceDataset(Dataset):
         sample = sample.convert("RGB")
         if self.transform is not None:
             sample = self.transform(sample)
-        if self.train:
-            return sample, label
-        else:
-            return sample, label, self.names[index]
+        return (sample, label) if self.train else (sample, label, self.names[index])
 
     def __len__(self):
         return len(self.imgs)

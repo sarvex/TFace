@@ -17,8 +17,7 @@ def parse_args():
                         help='path to 5p list')
     parser.add_argument('--tfrecords_name', default='TFR-MS1M', type=str,  required=True,
                         help='path to the output of tfrecords dir path')
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 def get_img2lmk(pts_file):
@@ -36,7 +35,7 @@ def get_img2lmk(pts_file):
 def crop_transform(rimg, landmark, image_size):
     """ warpAffine face img by landmark
     """
-    assert landmark.shape[0] == 68 or landmark.shape[0] == 5
+    assert landmark.shape[0] in [68, 5]
     assert landmark.shape[1] == 2
     if landmark.shape[0] == 68:
         landmark5 = np.zeros((5, 2), dtype=np.float32)
@@ -58,8 +57,7 @@ def crop_transform(rimg, landmark, image_size):
     src[:, 0] += 8.0
     tform.estimate(landmark5, src)
     M = tform.params[0:2, :]
-    img = cv2.warpAffine(rimg, M, (image_size[1], image_size[0]), borderValue=0.0)
-    return img
+    return cv2.warpAffine(rimg, M, (image_size[1], image_size[0]), borderValue=0.0)
 
 
 def main():
@@ -76,42 +74,41 @@ def main():
     cur_shard_writer = None
     cur_shard_path = None
     cur_shard_offset = None
-    idx_writer = open(os.path.join(tfrecords_dir, "%s.index" % tfrecords_name), 'w')
-    with open(args.img_list, 'r') as f:
-        for line in f:
-            img_path = line.rstrip()
-            img = cv2.imread(img_path)
-            landmark = img2lmk[img_path]
-            crop_img = crop_transform(img, landmark, [112, 112])
-            img_bytes = cv2.imencode('.jpg', crop_img)[1].tostring()
+    with open(os.path.join(tfrecords_dir, f"{tfrecords_name}.index"), 'w') as idx_writer:
+        with open(args.img_list, 'r') as f:
+            for line in f:
+                img_path = line.rstrip()
+                img = cv2.imread(img_path)
+                landmark = img2lmk[img_path]
+                crop_img = crop_transform(img, landmark, [112, 112])
+                img_bytes = cv2.imencode('.jpg', crop_img)[1].tostring()
 
-            example = tf.train.Example(features=tf.train.Features(feature={
-                    'image': tf.train.Feature(bytes_list=tf.train.BytesList(value=[img_bytes]))}))
+                example = tf.train.Example(features=tf.train.Features(feature={
+                        'image': tf.train.Feature(bytes_list=tf.train.BytesList(value=[img_bytes]))}))
 
-            if cur_shard_size == 0:
-                print("{}: {} processed".format(dt.now(), count))
-                cur_shard_idx += 1
-                record_filename = '{0}-{1:05}.tfrecord'.format(tfrecords_name, cur_shard_idx)
-                if cur_shard_writer is not None:
-                    cur_shard_writer.close()
-                cur_shard_path = os.path.join(tfrecords_dir, record_filename)
-                cur_shard_writer = tf.python_io.TFRecordWriter(cur_shard_path)
-                cur_shard_offset = 0
+                if cur_shard_size == 0:
+                    print(f"{dt.now()}: {count} processed")
+                    cur_shard_idx += 1
+                    record_filename = '{0}-{1:05}.tfrecord'.format(tfrecords_name, cur_shard_idx)
+                    if cur_shard_writer is not None:
+                        cur_shard_writer.close()
+                    cur_shard_path = os.path.join(tfrecords_dir, record_filename)
+                    cur_shard_writer = tf.python_io.TFRecordWriter(cur_shard_path)
+                    cur_shard_offset = 0
 
-            example_bytes = example.SerializeToString()
-            cur_shard_writer.write(example_bytes)
-            cur_shard_writer.flush()
-            idx_writer.write('{}\t{}\t{}\n'.format(img_path, cur_shard_idx, cur_shard_offset))
-            cur_shard_offset += (len(example_bytes) + 16)
+                example_bytes = example.SerializeToString()
+                cur_shard_writer.write(example_bytes)
+                cur_shard_writer.flush()
+                idx_writer.write(f'{img_path}\t{cur_shard_idx}\t{cur_shard_offset}\n')
+                cur_shard_offset += (len(example_bytes) + 16)
 
-            count += 1
-            cur_shard_size = (cur_shard_size + 1) % 500000
+                count += 1
+                cur_shard_size = (cur_shard_size + 1) % 500000
 
-    if cur_shard_writer is not None:
-        cur_shard_writer.close()
-    idx_writer.close()
-    print('total examples number = {}'.format(count))
-    print('total shard number = {}'.format(cur_shard_idx+1))
+        if cur_shard_writer is not None:
+            cur_shard_writer.close()
+    print(f'total examples number = {count}')
+    print(f'total shard number = {cur_shard_idx + 1}')
 
 
 if __name__ == '__main__':

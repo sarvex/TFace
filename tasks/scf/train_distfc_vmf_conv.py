@@ -24,9 +24,6 @@ class TrainTask(BaseTask):
     def _loop_step_vmf(self, train_loaders, backbone, uncer_net,  kl, fc_ckpt, opt,
                    scaler, epoch, class_splits):
         log_step = 100  # 100 batch
-        # backbone.train()  # set to training mode
-        # for head in heads:
-            # head.train()
         uncer_net.train()
         batch_sizes = self.batch_sizes
 
@@ -60,20 +57,10 @@ class TrainTask(BaseTask):
             kappa = torch.split(kappa, split_size_or_sections=batch_sizes) #for x in kappa
             mu = torch.split(mu, split_size_or_sections=batch_sizes) #for x in mu 
 
-            mus = []
-            for x in mu:
-                mus.append(x)
-
-            kappas = []
-            for x in kappa:
-                kappas.append(x)
-            all_labels = []
+            mus = list(mu)
+            kappas = list(kappa)
             wcs = []
-            #for i in range(len(batch_sizes)):
-            #    all_labels.append(torch.cat([x[i] for x in labels], dim=0).cuda())
-            for x in labels:
-                all_labels.append(x)
-
+            all_labels = list(labels)
             step_losses = []
             # step_original_outputs = []
             for i in range(len(batch_sizes)):
@@ -93,11 +80,11 @@ class TrainTask(BaseTask):
                 # measure accuracy and record loss
                 am_losses[i].update(step_losses[i].data.item(),
                                     all_labels[i].size(0))
-               
+
                 if self.rank == 0 and (batch == 0 or ((batch + 1) % log_step == 0)):
                     summarys = {
                         'train/loss_%d' % i: am_losses[i].val
-                        
+
                     }
                     self._writer_summarys(summarys, batch, epoch)
 

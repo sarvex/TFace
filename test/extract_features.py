@@ -21,8 +21,7 @@ def parse_args():
     parser.add_argument('--filename_list', default='', required=True, help='file_list')
     parser.add_argument('--embedding_size', default=512, help='embedding_size')
     parser.add_argument('--output_dir', default='', required=True, help='output dir')
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 def de_preprocess(tensor):
@@ -55,7 +54,7 @@ def extract_features(data_loader, backbone):
     flip_embeddings = []
     faceness_scores = []
     backbone.eval()
-    print("Number of Test Image: {}".format(len(data_loader)))
+    print(f"Number of Test Image: {len(data_loader)}")
     with torch.no_grad():
         for batch, label in tqdm(iter(data_loader)):
             fliped = hflip_batch(batch)
@@ -83,7 +82,7 @@ def main():
     input_size = [112, 112]
     backbone = get_model(args.backbone)(input_size)
     if not os.path.exists(args.ckpt_path):
-        raise RuntimeError("%s not exists" % args.ckpt_path)
+        raise RuntimeError(f"{args.ckpt_path} not exists")
 
     # load ckpt
     backbone.load_state_dict(torch.load(args.ckpt_path))
@@ -91,10 +90,7 @@ def main():
     gpus = [int(x) for x in args.gpu_ids.rstrip().split(',')]
     if len(gpus) > 1:
         backbone = torch.nn.DataParallel(backbone, device_ids=gpus)
-        backbone = backbone.cuda()
-    else:
-        backbone = backbone.cuda()
-
+    backbone = backbone.cuda()
     test_transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.5, 0.5, 0.5],
@@ -112,7 +108,7 @@ def main():
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     np.save(feature_outputname, embeddings)
-    np.save(faceness_scores_outputname, faceness_scores)      
+    np.save(faceness_scores_outputname, faceness_scores)
     print("extract feature done")
 
 

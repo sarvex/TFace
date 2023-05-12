@@ -39,8 +39,7 @@ class TripletLoss():
 
         label_equal = torch.eq(labels.unsqueeze(1), labels.unsqueeze(0))
 
-        mask = indices_not_equal & label_equal
-        return mask
+        return indices_not_equal & label_equal
 
     def get_valid_negative_mask(self, labels):
         """
@@ -53,8 +52,7 @@ class TripletLoss():
 
         label_not_equal = torch.ne(labels.unsqueeze(1), labels.unsqueeze(0))
 
-        mask = indices_not_equal & label_not_equal
-        return mask
+        return indices_not_equal & label_not_equal
 
     def get_valid_triplets_mask(self, labels):
         """
@@ -75,8 +73,7 @@ class TripletLoss():
         i_ne_k = ~i_eq_k
         valid_labels = i_eq_j & i_ne_k
 
-        mask = distinct_indices & valid_labels
-        return mask
+        return distinct_indices & valid_labels
 
     def batch_all_triplet_loss(self, labels, embeddings, margin, squared=False):
         """

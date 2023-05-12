@@ -55,7 +55,7 @@ def image2template_feature(img_feats=None, templates=None, medias=None):
         # media_norm_feats = media_norm_feats / np.sqrt(np.sum(media_norm_feats ** 2, -1, keepdims=True))
         template_feats[count_template] = np.sum(media_norm_feats, 0)
         if count_template % 2000 == 0:
-            print('Finish Calculating {} template features.'.format(count_template))
+            print(f'Finish Calculating {count_template} template features.')
     template_norm_feats = template_feats / np.sqrt(np.sum(template_feats ** 2, -1, keepdims=True))
     return template_norm_feats, unique_templates
 
@@ -80,7 +80,7 @@ def verification(template_norm_feats=None, unique_templates=None, p1=None, p2=No
         similarity_score = np.sum(feat1 * feat2, -1)
         score[s] = similarity_score.flatten()
         if c % 10 == 0:
-            print('Finish {}/{} pairs.'.format(c, total_sublists))
+            print(f'Finish {c}/{total_sublists} pairs.')
     return score
 
 
@@ -101,8 +101,7 @@ def parse_args():
     parser.add_argument('--output_name', dest='output_name',
                         help='String appended to output snapshots.',
                         default='', type=str)
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 
@@ -151,7 +150,7 @@ if __name__ == "__main__":
     img_feats, faceness_scores = get_image_feature(feature_path, face_path)
     stop = timeit.default_timer()
     print('Time: %.2f s. ' % (stop - start))
-    print('Feature Shape: ({} , {}) .'.format(img_feats.shape[0], img_feats.shape[1]))
+    print(f'Feature Shape: ({img_feats.shape[0]} , {img_feats.shape[1]}) .')
     # # Step3: Get Template Features
     # =============================================================
     # compute template features from image features.

@@ -45,16 +45,18 @@ class DDL(torch.nn.Module):
         return ddl_loss, neg_distances, pos_distances
 
     def _kl(self, anchor_distribution, distribution):
-        loss = F.kl_div(torch.log(distribution + 1e-9), anchor_distribution + 1e-9, reduction="batchmean")
-        return loss
+        return F.kl_div(
+            torch.log(distribution + 1e-9),
+            anchor_distribution + 1e-9,
+            reduction="batchmean",
+        )
 
     def _histogram(self, dists):
         dists = dists.view(-1, 1)
         simi_p = torch.mm(dists, torch.ones_like(self.t)) - torch.mm(torch.ones_like(dists), self.t)
         simi_p = torch.sum(torch.exp(-0.5 * torch.pow((simi_p / 0.1), 2)), 0, keepdim=True)
         p_sum = torch.sum(simi_p, 1)
-        simi_p_normed = simi_p / p_sum
-        return simi_p_normed
+        return simi_p / p_sum
 
     def _pos_distribution(self, first_features, second_features, positive_threshold=0.):
         pos_distirbutions = []

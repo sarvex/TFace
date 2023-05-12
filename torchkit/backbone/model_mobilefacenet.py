@@ -42,11 +42,7 @@ class Depth_Wise(Module):
         x = self.conv(x)
         x = self.conv_dw(x)
         x = self.project(x)
-        if self.residual:
-            output = short_cut + x
-        else:
-            output = x
-        return output
+        return short_cut + x if self.residual else x
 
 
 class Residual(Module):
@@ -54,14 +50,18 @@ class Residual(Module):
     """
     def __init__(self, channel, num_block, groups, kernel=(3, 3), stride=(1, 1), padding=(1, 1)):
         super(Residual, self).__init__()
-        modules = []
-        for _ in range(num_block):
-            modules.append(Depth_Wise(channel, channel,
-                                      kernel=kernel,
-                                      stride=stride,
-                                      padding=padding,
-                                      groups=groups,
-                                      residual=True))
+        modules = [
+            Depth_Wise(
+                channel,
+                channel,
+                kernel=kernel,
+                stride=stride,
+                padding=padding,
+                groups=groups,
+                residual=True,
+            )
+            for _ in range(num_block)
+        ]
         self.model = Sequential(*modules)
 
     def forward(self, x):

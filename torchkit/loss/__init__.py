@@ -18,4 +18,4 @@ def get_loss(key):
     if key in _loss_dict.keys():
         return _loss_dict[key]
     else:
-        raise KeyError("not support loss {}".format(key))
+        raise KeyError(f"not support loss {key}")

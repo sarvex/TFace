@@ -69,7 +69,7 @@ class IndexTFRDataset(Dataset):
         for record_file in set(self.records):
             record_file = os.path.join(self.root_dir, record_file)
             if not os.path.exists(record_file):
-                raise RuntimeError("tfrecord file： %s not found" % record_file)
+                raise RuntimeError(f"tfrecord file： {record_file} not found")
         self.class_num = max(self.labels) + 1
         self.sample_num = len(self.records)
         print('class_num: %d, sample_num:  %d' % (self.class_num, self.sample_num))
@@ -93,14 +93,13 @@ class IndexTFRDataset(Dataset):
             proto_len = struct.unpack('Q', byte_len_crc[:8])[0]
             pb_data = ifs.read(proto_len)
             if len(pb_data) < proto_len:
-                print("read pb_data err,proto_len:%s pb_data len:%s" % (proto_len, len(pb_data)))
+                print(f"read pb_data err,proto_len:{proto_len} pb_data len:{len(pb_data)}")
                 return None
         example = example_pb2.Example()
         example.ParseFromString(pb_data)
         # keep key value in order
         feature = sorted(example.features.feature.items())
-        record = self._parser(feature)
-        return record
+        return self._parser(feature)
 
     def __getitem__(self, index):
         offset = self.offsets[index]
@@ -133,11 +132,11 @@ class PairIndexTFRDataset(IndexTFRDataset):
         for record_file in set(records_first):
             record_file = os.path.join(self.root_dir, record_file)
             if not os.path.exists(record_file):
-                raise RuntimeError("tfrecord file： %s not found" % record_file)
+                raise RuntimeError(f"tfrecord file： {record_file} not found")
         for record_file in set(records_second):
             record_file = os.path.join(self.root_dir, record_file)
             if not os.path.exists(record_file):
-                raise RuntimeError("tfrecord file： %s not found" % record_file)
+                raise RuntimeError(f"tfrecord file： {record_file} not found")
 
         self.sample_num = len(self.records)
         first_labels, _ = map(list, zip(*self.labels))

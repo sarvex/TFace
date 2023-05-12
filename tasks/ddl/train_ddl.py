@@ -41,17 +41,19 @@ class TrainDDLTask(BaseTask):
                 self.is_pair_flags.append(branch['IS_PAIR'])
         self.normal_branch_number = self.is_pair_flags.count(False)
         self.pair_branch_number = self.is_pair_flags.count(True)
-        logging.info("normal_branch_number: {}".format(self.normal_branch_number))
-        logging.info("pair_branch_number: {}".format(self.pair_branch_number))
+        logging.info(f"normal_branch_number: {self.normal_branch_number}")
+        logging.info(f"pair_branch_number: {self.pair_branch_number}")
 
     def _make_inputs(self):
         """ DDL task can process pair data branch
         """
         dataset_names = list(self.branches.keys())
         for name, batch_size in zip(dataset_names, self.batch_sizes):
-            logging.info("branch_name: {}; batch_size: {}".format(name, batch_size))
-        dataset_indexs = [os.path.join(self.cfg['INDEX_ROOT'],
-                                       '%s.txt' % branch_name) for branch_name in dataset_names]
+            logging.info(f"branch_name: {name}; batch_size: {batch_size}")
+        dataset_indexs = [
+            os.path.join(self.cfg['INDEX_ROOT'], f'{branch_name}.txt')
+            for branch_name in dataset_names
+        ]
         rgb_mean = self.cfg['RGB_MEAN']
         rgb_std = self.cfg['RGB_STD']
         transform = transforms.Compose([
@@ -101,10 +103,10 @@ class TrainDDLTask(BaseTask):
         _features_gather = [torch.zeros_like(pair_features) for _ in range(self.world_size)]
         features_gather = AllGather(pair_features, *_features_gather)
         features_gather = [torch.split(x, pair_batch_sizes) for x in features_gather]
-        all_pair_features = []
-        for i in range(len(pair_batch_sizes)):
-            all_pair_features.append(torch.cat([x[i] for x in features_gather], dim=0).cuda())
-        return all_pair_features
+        return [
+            torch.cat([x[i] for x in features_gather], dim=0).cuda()
+            for i in range(len(pair_batch_sizes))
+        ]
 
     def _loop_step(self, train_loaders, backbone, heads, criterion, ddl, opt,
                    scaler, epoch, class_splits):
@@ -155,18 +157,18 @@ class TrainDDLTask(BaseTask):
             _features_gather = [torch.zeros_like(features) for _ in range(self.world_size)]
             features_gather = AllGather(features, *_features_gather)
             features_gather = [torch.split(x, normal_batch_sizes) for x in features_gather]
-            all_normal_features = []
-            for i in range(len(normal_batch_sizes)):
-                all_normal_features.append(torch.cat([x[i] for x in features_gather], dim=0).cuda())
-
+            all_normal_features = [
+                torch.cat([x[i] for x in features_gather], dim=0).cuda()
+                for i in range(len(normal_batch_sizes))
+            ]
             # gather normal labels
             labels_gather = [torch.zeros_like(normal_labels) for _ in range(self.world_size)]
             dist.all_gather(labels_gather, normal_labels)
             labels_gather = [torch.split(x, normal_batch_sizes) for x in labels_gather]
-            all_normal_labels = []
-            for i in range(len(normal_batch_sizes)):
-                all_normal_labels.append(torch.cat([x[i] for x in labels_gather], dim=0).cuda())
-
+            all_normal_labels = [
+                torch.cat([x[i] for x in labels_gather], dim=0).cuda()
+                for i in range(len(normal_batch_sizes))
+            ]
             # calculate softmax-based loss
             step_losses = []
             step_original_outputs = []
@@ -214,9 +216,10 @@ class TrainDDLTask(BaseTask):
                     'train/top5_%d' % i: am_top5s[i].val
                 }
                 self._writer_summarys(summarys, batch, epoch)
-            histograms = {}
-            for index, neg in enumerate(neg_distances):
-                    histograms['neg_%d' % index] = neg.detach().cpu().numpy()
+            histograms = {
+                'neg_%d' % index: neg.detach().cpu().numpy()
+                for index, neg in enumerate(neg_distances)
+            }
             for index, pos in enumerate(pos_distances):
                     histograms['pos_%d' % index] = pos.detach().cpu().numpy()
             self._writer_histograms(histograms, batch, epoch)

@@ -87,8 +87,9 @@ class Bottleneck(namedtuple('Block', ['in_channel', 'depth', 'stride'])):
 
 def get_block(in_channel, depth, num_units, stride=2):
 
-    return [Bottleneck(in_channel, depth, stride)] +\
-           [Bottleneck(depth, depth, 1) for i in range(num_units - 1)]
+    return [Bottleneck(in_channel, depth, stride)] + [
+        Bottleneck(depth, depth, 1) for _ in range(num_units - 1)
+    ]
 
 
 def get_blocks(num_layers):
@@ -147,11 +148,11 @@ class Backbone(Module):
         """
         super(Backbone, self).__init__()
         assert input_size[0] in [112, 224], \
-            "input_size should be [112, 112] or [224, 224]"
+                "input_size should be [112, 112] or [224, 224]"
         assert num_layers in [18, 34, 50, 100, 152, 200], \
-            "num_layers should be 18, 34, 50, 100 or 152"
+                "num_layers should be 18, 34, 50, 100 or 152"
         assert mode in ['ir', 'ir_se'], \
-            "mode should be ir or ir_se"
+                "mode should be ir or ir_se"
         self.input_layer = Sequential(Conv2d(3, 64, (3, 3), 1, 1, bias=False),
                                       BatchNorm2d(64), PReLU(64))
         blocks = get_blocks(num_layers)
@@ -181,10 +182,12 @@ class Backbone(Module):
 
         modules = []
         for block in blocks:
-            for bottleneck in block:
-                modules.append(
-                    unit_module(bottleneck.in_channel, bottleneck.depth,
-                                bottleneck.stride))
+            modules.extend(
+                unit_module(
+                    bottleneck.in_channel, bottleneck.depth, bottleneck.stride
+                )
+                for bottleneck in block
+            )
         self.body = Sequential(*modules)
 
         initialize_weights(self.modules())
@@ -199,78 +202,58 @@ class Backbone(Module):
 def IR_18(input_size):
     """ Constructs a ir-18 model.
     """
-    model = Backbone(input_size, 18, 'ir')
-
-    return model
+    return Backbone(input_size, 18, 'ir')
 
 
 def IR_34(input_size):
     """ Constructs a ir-34 model.
     """
-    model = Backbone(input_size, 34, 'ir')
-
-    return model
+    return Backbone(input_size, 34, 'ir')
 
 
 def IR_50(input_size):
     """ Constructs a ir-50 model.
     """
-    model = Backbone(input_size, 50, 'ir')
-
-    return model
+    return Backbone(input_size, 50, 'ir')
 
 
 def IR_101(input_size):
     """ Constructs a ir-101 model.
     """
-    model = Backbone(input_size, 100, 'ir')
-
-    return model
+    return Backbone(input_size, 100, 'ir')
 
 
 def IR_152(input_size):
     """ Constructs a ir-152 model.
     """
-    model = Backbone(input_size, 152, 'ir')
-
-    return model
+    return Backbone(input_size, 152, 'ir')
 
 
 def IR_200(input_size):
     """ Constructs a ir-200 model.
     """
-    model = Backbone(input_size, 200, 'ir')
-
-    return model
+    return Backbone(input_size, 200, 'ir')
 
 
 def IR_SE_50(input_size):
     """ Constructs a ir_se-50 model.
     """
-    model = Backbone(input_size, 50, 'ir_se')
-
-    return model
+    return Backbone(input_size, 50, 'ir_se')
 
 
 def IR_SE_101(input_size):
     """ Constructs a ir_se-101 model.
     """
-    model = Backbone(input_size, 100, 'ir_se')
-
-    return model
+    return Backbone(input_size, 100, 'ir_se')
 
 
 def IR_SE_152(input_size):
     """ Constructs a ir_se-152 model.
     """
-    model = Backbone(input_size, 152, 'ir_se')
-
-    return model
+    return Backbone(input_size, 152, 'ir_se')
 
 
 def IR_SE_200(input_size):
     """ Constructs a ir_se-200 model.
     """
-    model = Backbone(input_size, 200, 'ir_se')
-
-    return model
+    return Backbone(input_size, 200, 'ir_se')

@@ -76,9 +76,11 @@ class BaseTask(object):
         """
         dataset_names = list(self.branches.keys())
         for name, batch_size in zip(dataset_names, self.batch_sizes):
-            logging.info("branch_name: {}; batch_size: {}".format(name, batch_size))
-        dataset_indexs = [os.path.join(self.cfg['INDEX_ROOT'], '%s.txt' % branch_name)
-                          for branch_name in dataset_names]
+            logging.info(f"branch_name: {name}; batch_size: {batch_size}")
+        dataset_indexs = [
+            os.path.join(self.cfg['INDEX_ROOT'], f'{branch_name}.txt')
+            for branch_name in dataset_names
+        ]
         rgb_mean = self.cfg['RGB_MEAN']
         rgb_std = self.cfg['RGB_STD']
         transform = transforms.Compose([
@@ -122,7 +124,7 @@ class BaseTask(object):
         backbone_name = self.cfg['BACKBONE_NAME']
         backbone_model = get_model(backbone_name)
         backbone = backbone_model(self.input_size)
-        logging.info("{} Backbone Generated".format(backbone_name))
+        logging.info(f"{backbone_name} Backbone Generated")
 
         embedding_size = self.cfg['EMBEDDING_SIZE']
         heads = []
@@ -132,7 +134,7 @@ class BaseTask(object):
         for class_num in class_nums:
             class_split = get_class_split(class_num, self.world_size)
             class_splits.append(class_split)
-            logging.info('Split FC: {}'.format(class_split))
+            logging.info(f'Split FC: {class_split}')
             init_value = torch.FloatTensor(embedding_size, class_num)
             init.normal_(init_value, std=0.01)
             head = metric(in_features=embedding_size,
@@ -156,12 +158,17 @@ class BaseTask(object):
         head_params = []
         for head in heads:
             head_params += list(head.parameters())
-        optimizer = optim.SGD([
-            {'params': backbone_paras_wo_bn + head_params, 'weight_decay': weight_decay},
-            {'params': backbone_paras_only_bn}],
+        return optim.SGD(
+            [
+                {
+                    'params': backbone_paras_wo_bn + head_params,
+                    'weight_decay': weight_decay,
+                },
+                {'params': backbone_paras_only_bn},
+            ],
             lr=lr,
-            momentum=momentum)
-        return optimizer
+            momentum=momentum,
+        )
 
     def _create_writer(self):
         """ build tensorboard summary writer
@@ -173,8 +180,8 @@ class BaseTask(object):
         """
         if self.rank == 0:
             backbone_path = os.path.join(
-                self.model_root,
-                "Backbone_Epoch_{}_checkpoint.pth".format(epoch + 1))
+                self.model_root, f"Backbone_Epoch_{epoch + 1}_checkpoint.pth"
+            )
             torch.save(backbone.module.state_dict(), backbone_path)
 
     def _save_meta(self, epoch, opt, scaler):
@@ -186,27 +193,26 @@ class BaseTask(object):
                 'OPTIMIZER': opt.state_dict(),
                 "AMP_SCALER": scaler.state_dict()}
             opt_path = os.path.join(
-                self.model_root,
-                "Optimizer_Epoch_{}_checkpoint.pth".format(epoch + 1))
+                self.model_root, f"Optimizer_Epoch_{epoch + 1}_checkpoint.pth"
+            )
             torch.save(save_dict, opt_path)
 
     def _save_heads(self, epoch, heads, dist_fc=True):
         """ save heads, if dist_fc is True, the head should be splited
         """
-        head_dict = {}
         head_names = list(self.branches.keys())
         assert len(heads) == len(head_names)
-        for i, head in enumerate(heads):
-            head_dict[head_names[i]] = head.state_dict()
+        head_dict = {head_names[i]: head.state_dict() for i, head in enumerate(heads)}
         if dist_fc:
             head_path = os.path.join(
                 self.model_root,
-                "HEAD_Epoch_{}_Split_{}_checkpoint.pth".format(epoch + 1, self.rank))
+                f"HEAD_Epoch_{epoch + 1}_Split_{self.rank}_checkpoint.pth",
+            )
             torch.save(head_dict, head_path)
         elif self.rank == 0:
             head_path = os.path.join(
-                self.model_root,
-                "HEAD_Epoch_{}_checkpoint.pth".format(epoch + 1))
+                self.model_root, f"HEAD_Epoch_{epoch + 1}_checkpoint.pth"
+            )
             torch.save(head_dict, head_path)
 
     def _save_ckpt(self, epoch, backbone, heads, opt, scaler, dist_fc=True):
@@ -229,32 +235,34 @@ class BaseTask(object):
         """ load pretrain meta ckpt if training mode is finetuning
         """
         if os.path.exists(meta_resume) and os.path.isfile(meta_resume):
-            logging.info("Loading meta Checkpoint '{}'".format(meta_resume))
+            logging.info(f"Loading meta Checkpoint '{meta_resume}'")
             meta_dict = torch.load(meta_resume)
             self.start_epoch = meta_dict['EPOCH']
             opt.load_state_dict(meta_dict['OPTIMIZER'])
             scaler.load_state_dict(meta_dict['AMP_SCALER'])
         else:
-            logging.info(("No Meta Found at '{}'"
-                          "Please Have a Check or Continue to Train from Scratch").format(meta_resume))
+            logging.info(
+                f"No Meta Found at '{meta_resume}'Please Have a Check or Continue to Train from Scratch"
+            )
 
     def _log_tensor(self, batch, epoch, duration, losses, top1, top5, log_step=100):
         """ logging training info
         """
-        if self.rank == 0 and (batch == 0 or ((batch + 1) % log_step == 0)):
-            logging.info("Epoch {} / {}, batch {} / {}, {:.4f} sec/batch".format(
-                epoch + 1, self.epoch_num, batch + 1, self.step_per_epoch,
-                duration))
-            log_tensors = {}
-            log_tensors['loss'] = [x.val for x in losses]
-            log_tensors['prec@1'] = [x.val for x in top1]
-            log_tensors['prec@5'] = [x.val for x in top5]
-
-            log_str = " " * 25
-            for k, v in log_tensors.items():
-                s = ', '.join(['%.6f' % x for x in v])
-                log_str += '{} = [{}] '.format(k, s)
-            print(log_str)
+        if self.rank != 0 or batch != 0 and (batch + 1) % log_step != 0:
+            return
+        logging.info("Epoch {} / {}, batch {} / {}, {:.4f} sec/batch".format(
+            epoch + 1, self.epoch_num, batch + 1, self.step_per_epoch,
+            duration))
+        log_tensors = {
+            'loss': [x.val for x in losses],
+            'prec@1': [x.val for x in top1],
+            'prec@5': [x.val for x in top5],
+        }
+        log_str = " " * 25
+        for k, v in log_tensors.items():
+            s = ', '.join(['%.6f' % x for x in v])
+            log_str += f'{k} = [{s}] '
+        print(log_str)
 
     def _writer_summarys(self, summarys, batch, epoch, log_step=100):
         if self.rank == 0 and (batch == 0 or ((batch + 1) % log_step == 0)):

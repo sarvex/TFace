@@ -24,7 +24,7 @@ class IDBalanceDataset(FaceDataset):
         if label in self.label2index:
             return len(self.label2index[label])
         else:
-            raise RuntimeError('Cannot find label {}'.format(label))
+            raise RuntimeError(f'Cannot find label {label}')
 
     def __getitem__(self, index):
         label, offset = index
@@ -68,7 +68,7 @@ class IDBalanceTFRDataset(IndexTFRDataset):
         if label in self.id_dict:
             return len(self.id_dict[label])
         else:
-            raise RuntimeError('Cannot find person id {}'.format(label))
+            raise RuntimeError(f'Cannot find person id {label}')
 
     def __len__(self):
         return len(self.label_set)
@@ -145,8 +145,10 @@ class DistributedIDBalanceSampler(Sampler):
             for person_id in indices:
                 person_id_indices = person_offset_indices[person_id]
                 iter_person_indices = person_id_indices[person_iter:self.epoch_max_pic:self.epoch_max_iter]
-                for i in range(self.person_num):
-                    shuffle_pic_indices.append((person_id, iter_person_indices[i]))
+                shuffle_pic_indices.extend(
+                    (person_id, iter_person_indices[i])
+                    for i in range(self.person_num)
+                )
         return iter(shuffle_pic_indices)
 
     def __len__(self):

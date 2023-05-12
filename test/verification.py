@@ -16,8 +16,7 @@ def parse_args():
     parser.add_argument('--batch_size', default=64, help='batch size')
     parser.add_argument('--data_root', default='', required=True, help='validation data root')
     parser.add_argument('--embedding_size', default=512, help='embedding_size')
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 def get_val_pair_from_bin(path, name):
@@ -60,7 +59,7 @@ def get_val_pair(path, name):
     """
     import bcolz
     carray = bcolz.carray(rootdir=os.path.join(path, name), mode='r')
-    issame = np.load('{}/{}_list.npy'.format(path, name))
+    issame = np.load(f'{path}/{name}_list.npy')
 
     return carray, issame
 
@@ -92,16 +91,13 @@ def main():
     # load backbone
     backbone = get_model(args.backbone)(input_size)
     if not os.path.exists(args.ckpt_path):
-        raise RuntimeError("%s not exists" % args.ckpt_path)
+        raise RuntimeError(f"{args.ckpt_path} not exists")
     backbone.load_state_dict(torch.load(args.ckpt_path))
     # backbone to gpu
     gpus = [int(x) for x in args.gpu_ids.rstrip().split(',')]
     if len(gpus) > 1:
         backbone = torch.nn.DataParallel(backbone, device_ids=gpus)
-        backbone = backbone.cuda()
-    else:
-        backbone = backbone.cuda()
-
+    backbone = backbone.cuda()
     print("Perform Evaluation on LFW, CFP_FP, AgeDB, CPLFW...")
     # LFW result
     accuracy_lfw, best_threshold_lfw = perform_val_bin(
@@ -110,7 +106,7 @@ def main():
         backbone,
         lfw,
         lfw_issame)
-    print("Evaluation: LFW Acc: {}, thresh: {}".format(accuracy_lfw, best_threshold_lfw))
+    print(f"Evaluation: LFW Acc: {accuracy_lfw}, thresh: {best_threshold_lfw}")
     # CFP-FP result
     accuracy_cfp_fp, best_threshold_cfp_fp = perform_val_bin(
         args.embedding_size,
@@ -119,7 +115,9 @@ def main():
         cfp_fp,
         cfp_fp_issame)
     # AgeDB result
-    print("Evaluation: CFP_FP Acc: {}, thresh: {}".format(accuracy_cfp_fp, best_threshold_cfp_fp))
+    print(
+        f"Evaluation: CFP_FP Acc: {accuracy_cfp_fp}, thresh: {best_threshold_cfp_fp}"
+    )
     accuracy_agedb, best_threshold_agedb = perform_val_bin(
         args.embedding_size,
         args.batch_size,
@@ -127,7 +125,9 @@ def main():
         agedb_30,
         agedb_30_issame)
     # CALFW result
-    print("Evaluation: AgeDB Acc: {}, thresh: {}".format(accuracy_agedb, best_threshold_agedb))
+    print(
+        f"Evaluation: AgeDB Acc: {accuracy_agedb}, thresh: {best_threshold_agedb}"
+    )
     accuracy_calfw, best_threshold_calfw = perform_val_bin(
         args.embedding_size,
         args.batch_size,
@@ -135,14 +135,18 @@ def main():
         calfw,
         calfw_issame)
     # CPLFW result
-    print("Evaluation: CALFW Acc: {}, thresh: {}".format(accuracy_calfw, best_threshold_calfw))
+    print(
+        f"Evaluation: CALFW Acc: {accuracy_calfw}, thresh: {best_threshold_calfw}"
+    )
     accuracy_cplfw, best_threshold_cplfw = perform_val_bin(
         args.embedding_size,
         args.batch_size,
         backbone,
         cplfw,
         cplfw_issame)
-    print("Evaluation: CPLFW Acc: {}, thresh: {}".format(accuracy_cplfw, best_threshold_cplfw))
+    print(
+        f"Evaluation: CPLFW Acc: {accuracy_cplfw}, thresh: {best_threshold_cplfw}"
+    )
 
 
 if __name__ == "__main__":

@@ -8,7 +8,7 @@ from torch.utils.data import Dataset
 def crop_transform(rimg, landmark, image_size):
     """ warpAffine face img by landmark
     """
-    assert landmark.shape[0] == 68 or landmark.shape[0] == 5
+    assert landmark.shape[0] in [68, 5]
     assert landmark.shape[1] == 2
     if landmark.shape[0] == 68:  # 68 landmark, select the five-point
         landmark5 = np.zeros((5, 2), dtype=np.float32)
@@ -29,8 +29,7 @@ def crop_transform(rimg, landmark, image_size):
     src[:, 0] += 8.0
     tform.estimate(landmark5, src)
     M = tform.params[0:2, :]
-    img = cv2.warpAffine(rimg, M, (image_size[1], image_size[0]), borderValue=0.0)
-    return img
+    return cv2.warpAffine(rimg, M, (image_size[1], image_size[0]), borderValue=0.0)
 
 
 class IJBDataset(Dataset):
@@ -41,7 +40,7 @@ class IJBDataset(Dataset):
         self.transform = transform
         self.root_dir = root_dir
         self.imgs, self.faceness_scores, self.lmks = self.read_samples_from_record(root_dir, record_dir)
-        print("Number of Sampels:{}".format(len(self.imgs)))
+        print(f"Number of Sampels:{len(self.imgs)}")
 
     def __getitem__(self, index):
         """ return sample and score

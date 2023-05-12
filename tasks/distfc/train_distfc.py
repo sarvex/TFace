@@ -59,18 +59,18 @@ class TrainTask(BaseTask):
             _features_gather = [torch.zeros_like(features) for _ in range(self.world_size)]
             features_gather = AllGather(features, *_features_gather)
             features_gather = [torch.split(x, batch_sizes) for x in features_gather]
-            all_features = []
-            for i in range(len(batch_sizes)):
-                all_features.append(torch.cat([x[i] for x in features_gather], dim=0).cuda())
-
+            all_features = [
+                torch.cat([x[i] for x in features_gather], dim=0).cuda()
+                for i in range(len(batch_sizes))
+            ]
             # gather labels
             labels_gather = [torch.zeros_like(labels) for _ in range(self.world_size)]
             dist.all_gather(labels_gather, labels)
             labels_gather = [torch.split(x, batch_sizes) for x in labels_gather]
-            all_labels = []
-            for i in range(len(batch_sizes)):
-                all_labels.append(torch.cat([x[i] for x in labels_gather], dim=0).cuda())
-
+            all_labels = [
+                torch.cat([x[i] for x in labels_gather], dim=0).cuda()
+                for i in range(len(batch_sizes))
+            ]
             step_losses = []
             step_original_outputs = []
             for i in range(len(batch_sizes)):

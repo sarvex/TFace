@@ -24,10 +24,9 @@ class CommonFace(nn.Module):
         self.in_features = in_features
         self.gpu_index = gpu_index
         self.out_features = class_split[gpu_index]
-        self.shard_start = []
-        self.shard_start.append(0)
+        self.shard_start = [0]
         self.shard_start.extend(accumulate(class_split))
-        logging.info('FC Start Point: {}'.format(self.shard_start))
+        logging.info(f'FC Start Point: {self.shard_start}')
 
         select_weight_init = weight_init[:, self.shard_start[self.gpu_index]:
                                          self.shard_start[self.gpu_index + 1]]

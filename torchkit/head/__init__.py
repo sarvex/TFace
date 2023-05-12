@@ -24,7 +24,7 @@ def get_head(key, dist_fc):
             'CurricularFace': CurricularFace,
             'Cifp': Cifp,
         }
-    if key in _head_dict.keys():
+    if key in _head_dict:
         return _head_dict[key]
     else:
-        raise KeyError("not support head {}".format(key))
+        raise KeyError(f"not support head {key}")

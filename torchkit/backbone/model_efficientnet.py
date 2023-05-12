@@ -366,32 +366,40 @@ class EfficientNet(nn.Module):
                 expansion_factor = expansion_factors_per_stage[j]
                 stride = strides_per_stage[i] if (j == 0) else 1
                 if i == 0:
-                    stage.add_module("unit{}".format(j + 1), EffiDwsConvUnit(
-                        in_channels=in_channels,
-                        out_channels=out_channels,
-                        stride=stride,
-                        bn_eps=bn_eps,
-                        activation=activation,
-                        tf_mode=tf_mode))
+                    stage.add_module(
+                        f"unit{j + 1}",
+                        EffiDwsConvUnit(
+                            in_channels=in_channels,
+                            out_channels=out_channels,
+                            stride=stride,
+                            bn_eps=bn_eps,
+                            activation=activation,
+                            tf_mode=tf_mode,
+                        ),
+                    )
                 else:
-                    stage.add_module("unit{}".format(j + 1), EffiInvResUnit(
-                        in_channels=in_channels,
-                        out_channels=out_channels,
-                        kernel_size=kernel_size,
-                        stride=stride,
-                        exp_factor=expansion_factor,
-                        se_factor=4,
-                        bn_eps=bn_eps,
-                        activation=activation,
-                        tf_mode=tf_mode))
+                    stage.add_module(
+                        f"unit{j + 1}",
+                        EffiInvResUnit(
+                            in_channels=in_channels,
+                            out_channels=out_channels,
+                            kernel_size=kernel_size,
+                            stride=stride,
+                            exp_factor=expansion_factor,
+                            se_factor=4,
+                            bn_eps=bn_eps,
+                            activation=activation,
+                            tf_mode=tf_mode,
+                        ),
+                    )
                 in_channels = out_channels
-            self.features.add_module("stage{}".format(i + 1), stage)
+            self.features.add_module(f"stage{i + 1}", stage)
         self.features.add_module("final_block", conv1x1_block(
             in_channels=in_channels,
             out_channels=final_block_channels,
             activation=activation))
         in_channels = final_block_channels
-       
+
         self.output = GDC(512, embedding_size)
         self._init_params()
 
@@ -467,7 +475,7 @@ def efficientnet(input_size, embedding_size=512, version='b1', **kwargs):
         width_factor = 2.2
         dropout_rate = 0.5
     else:
-        raise ValueError("Unsupported EfficientNet version {}".format(version))
+        raise ValueError(f"Unsupported EfficientNet version {version}")
 
     init_block_channels = 32
     layers = [1, 2, 2, 3, 3, 4, 1]
@@ -498,7 +506,7 @@ def efficientnet(input_size, embedding_size=512, version='b1', **kwargs):
         assert (int(final_block_channels * width_factor) == round_channels(final_block_channels * width_factor))
         final_block_channels = round_channels(final_block_channels * width_factor)
 
-    net = EfficientNet(
+    return EfficientNet(
         channels=channels,
         init_block_channels=init_block_channels,
         final_block_channels=final_block_channels,
@@ -510,9 +518,8 @@ def efficientnet(input_size, embedding_size=512, version='b1', **kwargs):
         bn_eps=bn_eps,
         in_size=in_size,
         embedding_size=embedding_size,
-        **kwargs)
-
-    return net
+        **kwargs
+    )
 
 
 def EfficientNetB0(input_size):

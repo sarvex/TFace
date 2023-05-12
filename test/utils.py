@@ -52,8 +52,7 @@ def l2_norm(input, axis=1):
     """l2 normalize
     """
     norm = torch.norm(input, 2, axis, True)
-    output = torch.div(input, norm)
-    return output
+    return torch.div(input, norm)
 
 
 def calculate_roc(thresholds,
@@ -118,10 +117,11 @@ def calculate_roc(thresholds,
                 thresholds[best_threshold_index],
                 dist[test_set],
                 actual_issame[test_set])
-        for i in test_set:
-            if actual_issame[i] and dist[i] > thresholds[best_threshold_index]:
-                bad_case.append(i)
-
+        bad_case.extend(
+            i
+            for i in test_set
+            if actual_issame[i] and dist[i] > thresholds[best_threshold_index]
+        )
     tpr = np.mean(tprs, 0)
     fpr = np.mean(fprs, 0)
     return tpr, fpr, accuracy, best_thresholds, bad_case
@@ -147,7 +147,7 @@ def evaluate(embeddings, actual_issame, nrof_folds=10, pca=0):
     """ evaluate function
     """
     thresholds = np.arange(0, 4, 0.01)
-    embeddings1 = embeddings[0::2]
+    embeddings1 = embeddings[::2]
     embeddings2 = embeddings[1::2]
     tpr, fpr, accuracy, best_thresholds, bad_case = calculate_roc(
         thresholds,
@@ -235,13 +235,12 @@ def perform_val_bin(embedding_size,
     with torch.no_grad():
         while idx + batch_size <= len(carray):
             batch = torch.tensor(carray[idx:idx + batch_size])
+            ccropped = batch
             if tta:
-                ccropped = batch
                 fliped = torch.flip(ccropped, dims=[3])
                 emb_batch = backbone(ccropped.cuda()).cpu() + backbone(fliped.cuda()).cpu()
                 embeddings[idx:idx + batch_size] = l2_norm(emb_batch)
             else:
-                ccropped = batch
                 embeddings[idx:idx + batch_size] = l2_norm(backbone(ccropped.cuda())).cpu()
             idx += batch_size
         if idx < len(carray):
@@ -263,7 +262,7 @@ def rfw_evaluate(embeddings, actual_issame, nrof_folds=10, pca = 0):
     """evaluate fucntion
     """
     thresholds = np.arange(-1, 1, 0.001)
-    embeddings1 = embeddings[0::2]
+    embeddings1 = embeddings[::2]
     embeddings2 = embeddings[1::2]
     tpr, fpr, accuracy, _, _ = calculate_roc(thresholds, embeddings1, embeddings2,
                                              np.asarray(actual_issame), nrof_folds=nrof_folds, pca = pca)

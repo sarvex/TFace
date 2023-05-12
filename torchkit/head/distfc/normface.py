@@ -27,6 +27,4 @@ class NormFace(CommonFace):
         kernel_norm = l2_norm(self.kernel, axis=0)
         cos_theta = torch.mm(inputs_norm, kernel_norm)
         cos_theta = cos_theta.clamp(-1, 1)
-        output = cos_theta * self.scale
-
-        return output
+        return cos_theta * self.scale

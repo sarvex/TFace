@@ -18,8 +18,7 @@ def parse_args():
     parser.add_argument('--key_point_list', dest='key_point_list',
                         help='key point list', type=str,
                         required=True)
-    parsed_args = parser.parse_args()
-    return parsed_args
+    return parser.parse_args()
 
 ###
 mean = np.asarray([0.485, 0.456, 0.406])
@@ -55,15 +54,15 @@ def crop_transform68(rimg, landmark, image_size, src):
     """
      crop headband image with landmark
     """
-    assert landmark.shape[0] == 68 or landmark.shape[0] == 5
+    assert landmark.shape[0] in [68, 5]
     assert landmark.shape[1] == 2
     tform = trans.SimilarityTransform()
 
     tform.estimate(landmark, src)
     M = tform.params[0:2, :]
-    img = cv2.warpAffine(
-        rimg, M, (image_size[1], image_size[0]), borderValue=0.0)
-    return img
+    return cv2.warpAffine(
+        rimg, M, (image_size[1], image_size[0]), borderValue=0.0
+    )
 
 
 def add_headband(image_path_list, headband_mats,
@@ -143,8 +142,7 @@ def nice_shards(total_num, n):
     """
     size = total_num // n + 1
     shards = [0]
-    for i in range(n):
-        shards.append(min(total_num, shards[i] + size))
+    shards.extend(min(total_num, shards[i] + size) for i in range(n))
     return shards
 
 def add_headband_main():
@@ -168,7 +166,7 @@ def add_headband_main():
             else:
                 line = line.strip('\n')
             img_paths.append(line)
-    print('total process pic is {}'.format(len(img_paths)))
+    print(f'total process pic is {len(img_paths)}')
 
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
